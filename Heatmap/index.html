@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .map-overlay {
+        position: relative;
+        bottom: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.8);
+        margin-top: 10px;
+        font-family: Montserrat, sans-serif;
+        font-size: 12px;
+        overflow: auto;
+        border-radius: 20px;
+      }
+
+      #features {
+        top: 0;
+        left: 15px;
+        height: 60px;
+        margin-top: 5px;
+        width: 400px;
+        text-align: center;
+        padding: 2px;
+      }
+
+      #menu {
+        background: #fff;
+        position: absolute;
+        z-index: 1;
+        top: 90px;
+        left: 10px;
+        border-radius: 3px;
+        width: 120px;
+        border: 1px solid rgba(0, 0, 0, 0.4);
+        font-family: 'Open Sans', sans-serif;
+      }
+
+      #menu a {
+        font-size: 13px;
+        color: #404040;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+        text-align: center;
+      }
+
+      #menu a:last-child {
+        border: none;
+      }
+
+      #menu a:hover {
+        background-color: #f8f8f8;
+        color: #404040;
+      }
+
+      #menu a.active {
+        background-color: #3887be;
+        color: #ffffff;
+      }
+
+      #menu a.active:hover {
+        background: #3074a4;
+      }
+
+
+
+    </style>
+
+</head>
+<body>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.min.js"></script>
+  <link
+  rel="stylesheet"
+  href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.css"
+  type="text/css"
+  />
+  <!-- Promise polyfill script required to use Mapbox GL Geocoder in IE 11 -->
+  <script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script>
+
+  <nav id="menu"></nav>
+  <div id='map'></div>
+  <div class='map-overlay' id='features'><h2>Densidad Airbnb, Santiago de Chile</h2>
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoibWFyaWFqb3NlZ2FldGVjIiwiYSI6ImNrM3l6Y2h6ajBkMzIzbHAzYTF4bXYwNncifQ.H-qzHYd3u0ENBTu0VnEibg';
+
+    var bounds = [
+    [-71.116528, -33.788644], // Southwest coordinates
+    [-70.126218, -33.125593] // Northeast coordinates
+    ];
+
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mariajosegaetec/ck8my3t4e23a01ipjs9jx7lel',
+      center: [-70.6557279, -33.44],
+      zoom: 10,
+      maxBounds: bounds
+    });
+
+
+    map.addControl(
+    new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl
+    })
+    );
+
+    map.addControl(new mapboxgl.NavigationControl());
+
+    map.on('load', function() {
+
+      map.addSource('airbnb', {
+        "type": 'geojson',
+        "data": 'https://mariajosegaete.github.io/airbnb.geojson'
+      });
+
+      map.addLayer({
+        id: 'points',
+        type: 'heatmap',
+        source: 'airbnb',
+        maxzoom: 15,
+        layout: {
+          'visibility': 'visible'
+        },
+        paint: {
+            // increase weight as diameter breast height increases
+          'heatmap-weight': {
+            property: 'dbh',
+            type: 'exponential',
+            stops: [
+              [1, 0],
+              [62, 1]
+              ]
+          },
+            // increase intensity as zoom level increases
+          'heatmap-intensity': {
+            stops: [
+              [14, 1],
+              [15, 3]
+            ]
+          },
+            // assign color values be applied to points depending on their density
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0, 'rgba(236,222,239,0)',
+            0.2, 'rgb(208,209,230)',
+            0.4, 'rgb(166,189,219)',
+            0.6, 'rgb(103,169,207)',
+            0.8, 'rgb(28,144,153)'
+          ],
+            // increase radius as zoom increases
+          'heatmap-radius': {
+            stops: [
+              [11, 15],
+              [15, 20]
+            ]
+          },
+            // decrease opacity to transition into the circle layer
+          'heatmap-opacity': {
+            default: 0.5,
+            stops: [
+              [10, 1],
+              [15, 0]
+            ]
+          },
+        }
+      }, 'waterway-label'
+      );
+
+      map.addLayer({
+        id: 'circles-point',
+        type: 'circle',
+        source: 'airbnb',
+        minzoom: 14,
+        layout: {
+          'visibility': 'visible'
+        },
+        paint: {
+          // increase the radius of the circle as the zoom level and dbh value increases
+          'circle-radius': {
+            property: 'dbh',
+            type: 'exponential',
+            stops: [
+              [{ zoom: 15, value: 1 }, 5],
+              [{ zoom: 15, value: 62 }, 10],
+              [{ zoom: 22, value: 1 }, 20],
+              [{ zoom: 22, value: 62 }, 50],
+            ]
+          },
+          'circle-color': {
+            property: 'dbh',
+            type: 'exponential',
+            stops: [
+              [0, 'rgba(236,222,239,0)'],
+              [10, 'rgb(236,222,239)'],
+              [20, 'rgb(208,209,230)'],
+              [30, 'rgb(166,189,219)'],
+              [40, 'rgb(103,169,207)'],
+              [50, 'rgb(28,144,153)'],
+              [60, 'rgb(1,108,89)']
+            ]
+          },
+          'circle-stroke-color': 'white',
+          'circle-stroke-width': 0.3,
+          'circle-opacity': {
+            stops: [
+              [14, 0],
+              [15, 1]
+            ]
+          }
+        }
+      }, 'waterway-label');
+
+      map.on('click', 'circles-point', function(e) {
+        new mapboxgl.Popup()
+          .setLngLat(e.features[0].geometry.coordinates)
+          .setHTML('<b>Direccion:</b> ' + e.features[0].properties.name + '\n' +'<b>Barrio:</b> ' + e.features[0].properties.neighbourhood + '\n' + '<b>Reviews:</b> ' + e.features[0].properties.number_of_reviews)
+          .addTo(map);
+      });
+
+      // Center the map on the coordinates of any clicked symbol from the 'symbols' layer.
+      map.on('click', 'circles-point', function(e) {
+        map.flyTo({ center: e.features[0].geometry.coordinates, speed: 0.5 });
+      });
+
+      map.on('mouseenter', 'circles-point', function() {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+
+      map.on('mouseleave', 'circles-point', function() {
+        map.getCanvas().style.cursor = '';
+      });
+    });
+
+    var toggleableLayerIds = ['circles-point', 'points'];
+
+    for (var i = 0; i < toggleableLayerIds.length; i++) {
+      var id = toggleableLayerIds[i];
+
+      var link = document.createElement('a');
+      link.href = '#';
+      link.className = 'active';
+      link.textContent = id;
+
+      link.onclick = function(e) {
+        var clickedLayer = this.textContent;
+        e.preventDefault();
+        e.stopPropagation();
+
+        var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+
+        if (visibility === 'visible') {
+          map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+          this.className = '';
+        } else {
+          this.className = 'active';
+          map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+        }
+      };
+
+      var layers = document.getElementById('menu');
+      layers.appendChild(link);
+    }
+
+
+  </script>
+</body>
+</html>
